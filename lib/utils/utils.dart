@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 bool isNumero(String s) {
@@ -55,5 +58,22 @@ void mostrarAlerta(BuildContext context, String mensaje) {
         ],
       );
     },
+  );
+}
+
+void mostrarAlertaIOS(BuildContext context, String mensaje) {
+  showCupertinoDialog(
+    context: context,
+    builder: (_) => CupertinoAlertDialog(
+      title: Text('Mensaje de alerta'),
+      content: Text(mensaje),
+      actions: [
+        CupertinoDialogAction(
+          child: Text('OK'),
+          isDefaultAction: true,
+          onPressed: () => Navigator.pop(context),
+        )
+      ],
+    ),
   );
 }

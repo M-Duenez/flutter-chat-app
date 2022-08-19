@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'dart:math';
 
+import 'package:chat_online/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:chat_online/utils/utils.dart';
+import 'package:provider/provider.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -267,43 +270,80 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _crearBoton() {
+    final authservice = Provider.of<AuthService>(context);
     //fromValidStream
     return ElevatedButton(
-      child: Container(
-        width: 370.0,
-        height: 60.0,
-        //padding: EdgeInsets.symmetric(horizontal: 80.0, vertical: 15.0),
-        child: Center(
-            child: Text(
-          'INGRESAR',
-          style: TextStyle(
-              fontFamily: 'ArialRoundedMTBold',
-              fontSize: 25.0 /*, color: Color.fromRGBO(92, 78, 154, 1)*/),
-        )),
-      ),
-      style: ButtonStyle(
-        foregroundColor: getColor(Color.fromRGBO(92, 78, 154, 1), Colors.white),
-        backgroundColor: getColor(
-            Color.fromRGBO(255, 255, 255, 1), Color.fromRGBO(92, 78, 154, 1)),
-        side: getBorde(Color.fromRGBO(92, 78, 154, 1), Colors.black),
-        shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-          RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(50.0),
-              side: BorderSide(color: Colors.red)),
+        child: Container(
+          width: 370.0,
+          height: 60.0,
+          //padding: EdgeInsets.symmetric(horizontal: 80.0, vertical: 15.0),
+          child: Center(
+              child: Text(
+            'INGRESAR',
+            style: TextStyle(
+                color: Colors.black,
+                fontFamily: 'ArialRoundedMTBold',
+                fontSize: 25.0 /*, color: Color.fromRGBO(92, 78, 154, 1)*/),
+          )),
         ),
-      ),
-      onPressed: (EmailValidator.validate(_email) &&
-              _password.length >= 6 /*&& validateStructure(_password)*/
-          ? () {
-              print(' $_email  $_password');
-              //Navigator.pushReplacementNamed(context, 'Home');
-            }
-          : () {
-              print('Error');
-              //Navigator.pushReplacementNamed(context, 'Perfil');
-              mostrarAlerta(context, 'Correo o Contraseña son incorrectos');
-            }),
-    );
+        style: ButtonStyle(
+          backgroundColor: getColor(Color.fromRGBO(255, 255, 255, 1),
+              Color.fromARGB(255, 37, 9, 158)),
+          elevation: MaterialStateProperty.all(2),
+          shape: MaterialStateProperty.all(StadiumBorder()),
+        ),
+        /*style: ButtonStyle(
+          
+          foregroundColor:
+              getColor(Color.fromRGBO(92, 78, 154, 1), Colors.white),
+          backgroundColor: getColor(
+              Color.fromRGBO(255, 255, 255, 1), Color.fromRGBO(92, 78, 154, 1)),
+          side: getBorde(Color.fromRGBO(92, 78, 154, 1), Colors.black),
+          shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+            RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(50.0),
+                side: BorderSide(color: Colors.red)),
+          ),
+        ),*/
+        onPressed: authservice.autenticando == true
+            ? null
+            : () async {
+                print(' $_email  $_password');
+                FocusScope.of(context).unfocus();
+
+                final loginOK =
+                    await authservice.login(_email.trim(), _password.trim());
+
+                if (loginOK == true) {
+                  // Navegar a otra pantalla
+                  // TODO: Conectar ala socket server
+                  Navigator.pushReplacementNamed(context, 'Usuarios');
+                } else {
+                  // Mostrar alert
+                  print('Error');
+                  //Navigator.pushReplacementNamed(context, 'Perfil');
+                  if (!Platform.isAndroid) {
+                    return mostrarAlerta(context, loginOK);
+                  } else {
+                    mostrarAlertaIOS(context, loginOK);
+                  }
+                }
+                //Navigator.pushReplacementNamed(context, 'Home');
+              }
+        /*(EmailValidator.validate(_email) &&
+                  _password.length >= 6 /*&& validateStructure(_password)*/
+              ? () {
+                  print(' $_email  $_password');
+
+                  authservice.login(_email.trim(), _password.trim());
+                  //Navigator.pushReplacementNamed(context, 'Home');
+                }
+              : () {
+                  print('Error');
+                  //Navigator.pushReplacementNamed(context, 'Perfil');
+                  mostrarAlerta(context, 'Correo o Contraseña son incorrectos');
+                }),*/
+        );
   }
 
   MaterialStateProperty<Color> getColor(Color color, Color colorPresionado) {

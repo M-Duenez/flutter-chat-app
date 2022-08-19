@@ -1,8 +1,13 @@
+import 'dart:io';
 import 'dart:math';
 
+import 'package:chat_online/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:chat_online/pages/usuarios_page.dart';
+import 'package:provider/provider.dart';
+
+import '../utils/utils.dart';
 
 class RegistroPage extends StatefulWidget {
   @override
@@ -93,6 +98,7 @@ class _RegistroPageState extends State<RegistroPage> {
   }
 
   Widget _loginForm(BuildContext context) {
+    final authservice = Provider.of<AuthService>(context);
     //final size = MediaQuery.of(context).size;
     return SingleChildScrollView(
       child: Column(
@@ -124,10 +130,10 @@ class _RegistroPageState extends State<RegistroPage> {
                 SizedBox(
                   height: 30.0,
                 ),
-                _crearApellidos(),
+                /*_crearApellidos(),
                 SizedBox(
                   height: 30.0,
-                ),
+                ),*/
                 _crearEmail(),
                 SizedBox(
                   height: 30.0,
@@ -138,7 +144,7 @@ class _RegistroPageState extends State<RegistroPage> {
               ],
             ),
           ),
-          SizedBox(height: 70.0),
+          SizedBox(height: 100.0),
           FlatButton(
             height: 60.0,
             minWidth: 370.0,
@@ -146,15 +152,31 @@ class _RegistroPageState extends State<RegistroPage> {
             color: Color.fromRGBO(231, 31, 118, 1),
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(50.0)),
-            onPressed: () {
-              print('Pagina de Registro');
-              print('$_nombre , $_apellido , $_email , $_password ');
-              /*Navigator.of(context).popUntil((route) => route.isFirst);
-              Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                      builder: (BuildContext context) => UsuariosPage()));*/
-            },
+            onPressed: (authservice.autenticando)
+                ? null
+                : () async {
+                    print('$_nombre  $_email  $_password');
+                    FocusScope.of(context).unfocus();
+
+                    final registrando = await authservice.registro(
+                        _nombre.trim(), _email.trim(), _password.trim());
+
+                    if (registrando == true) {
+                      print('Correcto');
+                      // Navegar a otra pantalla
+                      // TODO: Conectar ala socket server
+                      Navigator.pushReplacementNamed(context, 'Usuarios');
+                    } else {
+                      // Mostrar alert
+                      print('Error');
+                      //Navigator.pushReplacementNamed(context, 'Perfil');
+                      if (Platform.isAndroid) {
+                        return mostrarAlerta(context, registrando);
+                      } else {
+                        mostrarAlertaIOS(context, registrando);
+                      }
+                    }
+                  },
             child: Text(
               'Crear Cuenta',
               style: TextStyle(
@@ -235,25 +257,6 @@ class _RegistroPageState extends State<RegistroPage> {
   }
 
   Widget _crearEmail() {
-    /*return TextField(
-      keyboardType: TextInputType.emailAddress,
-      decoration: InputDecoration(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20.0),
-        ),
-        hintText: 'Correo Electronico',
-        labelText: 'Email',
-        helperText: 'Solo el Email',
-        suffixIcon: Icon(Icons.alternate_email_outlined),
-        icon: Icon(Icons.email_outlined),
-      ),
-      onChanged: (valor) {
-        setState(() {
-          //_email = valor;
-          print(valor);
-        });
-      },
-    );*/
     return Container(
       //padding: EdgeInsets.symmetric(horizontal: 20.0),
       //height: 600.0,
@@ -294,25 +297,6 @@ class _RegistroPageState extends State<RegistroPage> {
   }
 
   Widget _crearPassword() {
-    /*return TextField(
-      keyboardType: TextInputType.emailAddress,
-      decoration: InputDecoration(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20.0),
-        ),
-        hintText: 'Correo Electronico',
-        labelText: 'Email',
-        helperText: 'Solo el Email',
-        suffixIcon: Icon(Icons.alternate_email_outlined),
-        icon: Icon(Icons.email_outlined),
-      ),
-      onChanged: (valor) {
-        setState(() {
-          //_email = valor;
-          print(valor);
-        });
-      },
-    );*/
     return Container(
       //padding: EdgeInsets.symmetric(horizontal: 20.0),
       decoration: BoxDecoration(
@@ -348,43 +332,62 @@ class _RegistroPageState extends State<RegistroPage> {
   }
 
   Widget _crearBoton() {
+    final authservice = Provider.of<AuthService>(context);
     //fromValidStream
     return StreamBuilder(
         stream: null,
         builder: (context, snapshot) {
           return ElevatedButton(
-            child: Container(
-              width: 370.0,
-              height: 60.0,
-              //padding: EdgeInsets.symmetric(horizontal: 80.0, vertical: 15.0),
-              child: Center(
-                  child: Text(
-                'GUARDAR',
-                style: TextStyle(
-                    fontSize: 25.0 /*, color: Color.fromRGBO(92, 78, 154, 1)*/),
-              )),
-            ),
-            style: ButtonStyle(
-              foregroundColor:
-                  getColor(Color.fromRGBO(92, 78, 154, 1), Colors.white),
-              backgroundColor: getColor(Color.fromRGBO(255, 255, 255, 1),
-                  Color.fromRGBO(92, 78, 154, 1)),
-              side: getBorde(Color.fromRGBO(92, 78, 154, 1), Colors.black),
-              shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(50.0),
-                    side: BorderSide(color: Colors.red)),
+              child: Container(
+                width: 370.0,
+                height: 60.0,
+                //padding: EdgeInsets.symmetric(horizontal: 80.0, vertical: 15.0),
+                child: Center(
+                    child: Text(
+                  'GUARDAR',
+                  style: TextStyle(
+                      fontSize:
+                          25.0 /*, color: Color.fromRGBO(92, 78, 154, 1)*/),
+                )),
               ),
-            ),
-            onPressed: (EmailValidator.validate(_email) &&
-                    _password.length >= 6 //validateStructure(_password)
-                ? () {
-                    print('hola mundo $_email  $_password');
-                  }
-                : () {
-                    print('Error');
-                  }),
-          );
+              style: ButtonStyle(
+                foregroundColor:
+                    getColor(Color.fromRGBO(92, 78, 154, 1), Colors.white),
+                backgroundColor: getColor(Color.fromRGBO(255, 255, 255, 1),
+                    Color.fromRGBO(92, 78, 154, 1)),
+                side: getBorde(Color.fromRGBO(92, 78, 154, 1), Colors.black),
+                shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                  RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(50.0),
+                      side: BorderSide(color: Colors.red)),
+                ),
+              ),
+              onPressed: authservice.autenticando == true
+                  ? null
+                  : () async {
+                      print('$_nombre  $_email  $_password');
+                      FocusScope.of(context).unfocus();
+
+                      final registrando = await authservice.registro(
+                          _nombre.trim(), _email.trim(), _password.trim());
+
+                      if (registrando) {
+                        // Navegar a otra pantalla
+                        // TODO: Conectar ala socket server
+                        // Navigator.pushReplacementNamed(context, 'Usuarios');
+                        print('Correcto');
+                      } else {
+                        // Mostrar alert
+                        print('Error');
+                        //Navigator.pushReplacementNamed(context, 'Perfil');
+                        if (Platform.isAndroid) {
+                          return mostrarAlerta(context, 'Revise sus Campos');
+                        } else {
+                          mostrarAlertaIOS(context, 'Revise sus Campos');
+                        }
+                      }
+                      //Navigator.pushReplacementNamed(context, 'Home');
+                    });
         });
   }
 

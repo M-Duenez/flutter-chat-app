@@ -1,5 +1,7 @@
 import 'package:chat_online/models/usuario.dart';
+import 'package:chat_online/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 
 class UsuariosPage extends StatefulWidget {
@@ -13,31 +15,31 @@ class _UsuariosPageState extends State<UsuariosPage> {
 
   final usuarios = [
     Usuario(
-        uuid: '1',
+        uid: '1',
         online: true,
         nombre: 'Miguel',
         apellidos: 'Duenez Palomo',
         email: 'Miguel@outlook.com'),
     Usuario(
-        uuid: '2',
+        uid: '2',
         online: false,
         nombre: 'Armando',
         apellidos: 'Duenez Lopez',
         email: 'Armando@outlook.com'),
     Usuario(
-        uuid: '3',
+        uid: '3',
         online: true,
         nombre: 'Daniel',
         apellidos: 'Duenez Palomo',
         email: 'Daniel@outlook.com'),
     Usuario(
-        uuid: '4',
+        uid: '4',
         online: false,
         nombre: 'Teresa',
         apellidos: 'Duenez Palomo',
         email: 'Teresa@outlook.com'),
     Usuario(
-        uuid: '5',
+        uid: '5',
         online: true,
         nombre: 'Maria',
         apellidos: 'Palomo Moreales',
@@ -46,18 +48,27 @@ class _UsuariosPageState extends State<UsuariosPage> {
 
   @override
   Widget build(BuildContext context) {
+    final authservice = Provider.of<AuthService>(context);
+    final usuario = authservice.usuario;
     return Scaffold(
         appBar: AppBar(
           centerTitle: true,
           title: Text(
-            'Mi Nombre',
+            usuario?.nombre ?? 'Sin nombre',
             style: TextStyle(color: Colors.black),
           ),
           elevation: 1,
           backgroundColor: Colors.white,
           leading: IconButton(
-            icon: Icon(Icons.exit_to_app, color: Colors.black),
-            onPressed: () {},
+            icon: Icon(
+              Icons.exit_to_app,
+              color: Colors.red[900],
+            ),
+            onPressed: () {
+              // TODO: Desconectar del socket server
+              Navigator.pushReplacementNamed(context, 'Login');
+              AuthService.deleteToken();
+            },
           ),
           actions: [
             Container(
