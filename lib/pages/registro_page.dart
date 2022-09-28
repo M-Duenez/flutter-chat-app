@@ -2,11 +2,13 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:chat_online/services/auth_service.dart';
+import 'package:chat_online/widgets/button_grande.dart';
 import 'package:flutter/material.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:chat_online/pages/usuarios_page.dart';
 import 'package:provider/provider.dart';
 
+import '../services/socket_service.dart';
 import '../utils/utils.dart';
 
 class RegistroPage extends StatefulWidget {
@@ -19,13 +21,12 @@ class _RegistroPageState extends State<RegistroPage> {
   bool validateStructure(String value) {
     String pattern =
         r'^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[!@#\$&*~]).{8,}$';
-    RegExp regExp = new RegExp(pattern);
+    RegExp regExp = RegExp(pattern);
     return regExp.hasMatch(value);
   }
 
   @override
   Widget build(BuildContext context) {
-    final _screenSize = MediaQuery.of(context).size;
     return Scaffold(
       appBar: AppBar(
         foregroundColor: Colors.white,
@@ -47,58 +48,9 @@ class _RegistroPageState extends State<RegistroPage> {
     );
   }
 
-  Widget _crearFondo(BuildContext context, Size screenSize) {
-    final size = MediaQuery.of(context).size;
-    final fondo_morado = Container(
-      height: double.infinity,
-      width: double.infinity,
-      decoration: BoxDecoration(color: Color.fromRGBO(92, 78, 154, 1)),
-    );
-
-    final forma_fondo = Transform.rotate(
-        angle: -pi / 1.0,
-        child: Container(
-          decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(50.0), color: Colors.white),
-          width: screenSize.width,
-          height: 200.0,
-        ));
-
-    return Stack(
-      children: <Widget>[
-        fondo_morado,
-        Positioned(top: -50.0, child: forma_fondo),
-        /*Positioned(top: 30.0, left: -70.0, child: circulo),
-        Positioned(bottom: -30.0, right: 10.0, child: circulo),
-        Positioned(top: -60.0, right: -50.0, child: circulo),
-        Positioned(bottom: -30.0, left: 30.0, child: circulo),*/
-        Container(
-          padding: EdgeInsets.only(top: 40.0),
-          child: Row(
-            children: <Widget>[
-              SizedBox(
-                width: 20.0,
-              ),
-              Icon(Icons.person_pin_circle, color: Colors.black, size: 100.00),
-              SizedBox(
-                width: 30.0,
-              ),
-              Text(
-                'Galaspace',
-                style: TextStyle(
-                  color: Color.fromRGBO(62, 38, 105, 1),
-                  fontSize: 40.0,
-                ),
-              )
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _loginForm(BuildContext context) {
     final authservice = Provider.of<AuthService>(context);
+    final socketService = Provider.of<SocketService>(context);
     //final size = MediaQuery.of(context).size;
     return SingleChildScrollView(
       child: Column(
@@ -145,7 +97,43 @@ class _RegistroPageState extends State<RegistroPage> {
             ),
           ),
           SizedBox(height: 100.0),
-          FlatButton(
+          ButtonGrande(
+            titulo: 'CREAR CUENTA',
+            onPressed: (authservice.autenticando)
+                ? null
+                : () async {
+                    if (_nombre.isEmpty || _email.isEmpty) {
+                      return mostrarAlerta(context, 'Campos Obligatorios');
+                    }
+                    if (_password.length < 6) {
+                      return mostrarAlerta(
+                          context, 'Contraseña debe tener 6 caracteres');
+                    }
+                    // print('$_nombre  $_email  $_password');
+                    FocusScope.of(context).unfocus();
+
+                    final registrando = await authservice.registro(
+                        _nombre.trim(), _email.trim(), _password.trim());
+
+                    if (registrando == true) {
+                      print('Correcto');
+                      // Navegar a otra pantalla
+                      // TODO: Conectar ala socket server
+                      socketService.connect();
+                      Navigator.pushReplacementNamed(context, 'Usuarios');
+                    } else {
+                      // Mostrar alert
+                      // print(registrando);
+                      //Navigator.pushReplacementNamed(context, 'Perfil');
+                      if (Platform.isAndroid) {
+                        return mostrarAlerta(context, registrando.toString());
+                      } else {
+                        mostrarAlertaIOS(context, registrando.toString());
+                      }
+                    }
+                  },
+          ),
+          /*FlatButton(
             height: 60.0,
             minWidth: 370.0,
             textColor: Colors.white,
@@ -165,6 +153,7 @@ class _RegistroPageState extends State<RegistroPage> {
                       print('Correcto');
                       // Navegar a otra pantalla
                       // TODO: Conectar ala socket server
+                      socketService.connect();
                       Navigator.pushReplacementNamed(context, 'Usuarios');
                     } else {
                       // Mostrar alert
@@ -182,7 +171,7 @@ class _RegistroPageState extends State<RegistroPage> {
               style: TextStyle(
                   fontSize: 25.0 /*, color: Color.fromRGBO(92, 78, 154, 1)*/),
             ),
-          ),
+          ),*/
           SizedBox(height: 20.0),
         ],
       ),

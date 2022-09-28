@@ -2,6 +2,8 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:chat_online/services/auth_service.dart';
+import 'package:chat_online/services/socket_service.dart';
+import 'package:chat_online/widgets/button_grande.dart';
 import 'package:flutter/material.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:chat_online/utils/utils.dart';
@@ -17,18 +19,24 @@ class _LoginPageState extends State<LoginPage> {
   bool validateStructure(String value) {
     String pattern =
         r'^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[!@#\$&*~]).{8,}$';
-    RegExp regExp = new RegExp(pattern);
+    RegExp regExp = RegExp(pattern);
     return regExp.hasMatch(value);
   }
 
   @override
   Widget build(BuildContext context) {
+    dynamic ScreenHeight = MediaQuery.of(context).size.height;
+    // print(ScreenHeight);
     return Scaffold(
       //COLOR DE FONDO DE LA APP
       backgroundColor: Color.fromARGB(255, 37, 9, 158),
       body: CustomScrollView(
         slivers: <Widget>[
-          _crearAppBar(),
+          _crearAppBar(ScreenHeight),
+          /*Expanded(
+              child: Container(
+            height: 10.0,
+          )),*/
           SliverList(
             delegate: SliverChildListDelegate([
               SizedBox(
@@ -64,11 +72,11 @@ class _LoginPageState extends State<LoginPage> {
     );*/
   }
 
-  Widget _crearAppBar() {
+  Widget _crearAppBar(dynamic ScreenHeight) {
     return SliverAppBar(
       //COLOR DE FONDO DE LA APP
       backgroundColor: Color.fromARGB(255, 37, 9, 158),
-      expandedHeight: 290.0,
+      expandedHeight: (ScreenHeight >= 700.0) ? 300.0 : 268.0,
       floating: false,
       pinned: true,
       flexibleSpace: FlexibleSpaceBar(
@@ -109,11 +117,7 @@ class _LoginPageState extends State<LoginPage> {
     return Stack(
       children: <Widget>[
         //fondo_morado,
-        Positioned(top: -150.0, child: forma_fondo),
-        /*Positioned(top: 30.0, left: -70.0, child: circulo),
-        Positioned(bottom: -30.0, right: 10.0, child: circulo),
-        Positioned(top: -60.0, right: -50.0, child: circulo),
-        Positioned(bottom: -30.0, left: 30.0, child: circulo),*/
+        Positioned(top: -170.0, child: forma_fondo),
         Container(
           padding: EdgeInsets.only(top: 40.0),
           child: Column(
@@ -121,7 +125,7 @@ class _LoginPageState extends State<LoginPage> {
               //Logotipo de la aplicacion
               Image(
                 image: AssetImage('assets/img/logo3.png'),
-                width: 190,
+                width: 150,
                 height: 130,
               ),
               /* Icon(Icons.person_pin_circle, color: Colors.black, size: 100.00), */
@@ -133,7 +137,7 @@ class _LoginPageState extends State<LoginPage> {
                 'Chat Online',
                 style: TextStyle(
                     color: Color.fromRGBO(62, 38, 105, 1),
-                    fontSize: 40.0,
+                    fontSize: 30.0,
                     fontFamily: 'ArialRoundedMTBold'),
               )
             ],
@@ -151,7 +155,7 @@ class _LoginPageState extends State<LoginPage> {
         children: <Widget>[
           SafeArea(
               child: Container(
-            height: 30.0,
+            height: 5.0,
           )),
           //_crearEmail(),
           Container(
@@ -171,24 +175,13 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
           SizedBox(height: 20.0),
-          FlatButton(
-            height: 60.0,
-            minWidth: 370.0,
-            textColor: Colors.white,
-            color: Color.fromRGBO(231, 31, 118, 1),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(50.0)),
-            onPressed: () {
-              //Navigator.pushReplacementNamed(context, 'Registro');
-              print('hola mundo');
-              Navigator.pushNamed(context, 'Registro');
-            },
-            child: Text(
-              'REGISTRARSE',
-              style: TextStyle(
-                  fontSize: 25.0 /*, color: Color.fromRGBO(92, 78, 154, 1)*/),
-            ),
-          ),
+          ButtonGrande(
+              titulo: 'REGISTRARSE',
+              onPressed: () {
+                //Navigator.pushReplacementNamed(context, 'Registro');
+                // print('hola mundo');
+                Navigator.pushNamed(context, 'Registro');
+              }),
           SizedBox(height: 20.0),
         ],
       ),
@@ -271,6 +264,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _crearBoton() {
     final authservice = Provider.of<AuthService>(context);
+    final socketService = Provider.of<SocketService>(context);
     //fromValidStream
     return ElevatedButton(
         child: Container(
@@ -288,23 +282,10 @@ class _LoginPageState extends State<LoginPage> {
         ),
         style: ButtonStyle(
           backgroundColor: getColor(Color.fromRGBO(255, 255, 255, 1),
-              Color.fromARGB(255, 37, 9, 158)),
+              Color.fromARGB(255, 6, 236, 105)),
           elevation: MaterialStateProperty.all(2),
           shape: MaterialStateProperty.all(StadiumBorder()),
         ),
-        /*style: ButtonStyle(
-          
-          foregroundColor:
-              getColor(Color.fromRGBO(92, 78, 154, 1), Colors.white),
-          backgroundColor: getColor(
-              Color.fromRGBO(255, 255, 255, 1), Color.fromRGBO(92, 78, 154, 1)),
-          side: getBorde(Color.fromRGBO(92, 78, 154, 1), Colors.black),
-          shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-            RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(50.0),
-                side: BorderSide(color: Colors.red)),
-          ),
-        ),*/
         onPressed: authservice.autenticando == true
             ? null
             : () async {
@@ -317,12 +298,13 @@ class _LoginPageState extends State<LoginPage> {
                 if (loginOK == true) {
                   // Navegar a otra pantalla
                   // TODO: Conectar ala socket server
+                  socketService.connect();
                   Navigator.pushReplacementNamed(context, 'Usuarios');
                 } else {
                   // Mostrar alert
                   print('Error');
                   //Navigator.pushReplacementNamed(context, 'Perfil');
-                  if (!Platform.isAndroid) {
+                  if (Platform.isAndroid) {
                     return mostrarAlerta(context, loginOK);
                   } else {
                     mostrarAlertaIOS(context, loginOK);

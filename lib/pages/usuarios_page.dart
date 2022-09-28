@@ -1,5 +1,8 @@
 import 'package:chat_online/models/usuario.dart';
 import 'package:chat_online/services/auth_service.dart';
+import 'package:chat_online/services/chat_service.dart';
+import 'package:chat_online/services/socket_service.dart';
+import 'package:chat_online/services/usuarios_services.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
@@ -10,45 +13,39 @@ class UsuariosPage extends StatefulWidget {
 }
 
 class _UsuariosPageState extends State<UsuariosPage> {
+  final usuariosService = UsuariosService();
+
   final RefreshController _refreshController =
       RefreshController(initialRefresh: false);
 
-  final usuarios = [
-    Usuario(
-        uid: '1',
-        online: true,
-        nombre: 'Miguel',
-        apellidos: 'Duenez Palomo',
-        email: 'Miguel@outlook.com'),
-    Usuario(
-        uid: '2',
-        online: false,
-        nombre: 'Armando',
-        apellidos: 'Duenez Lopez',
-        email: 'Armando@outlook.com'),
-    Usuario(
-        uid: '3',
-        online: true,
-        nombre: 'Daniel',
-        apellidos: 'Duenez Palomo',
-        email: 'Daniel@outlook.com'),
-    Usuario(
-        uid: '4',
-        online: false,
-        nombre: 'Teresa',
-        apellidos: 'Duenez Palomo',
-        email: 'Teresa@outlook.com'),
-    Usuario(
-        uid: '5',
-        online: true,
-        nombre: 'Maria',
-        apellidos: 'Palomo Moreales',
-        email: 'Maria@outlook.com'),
-  ];
+  List<Usuario> usuarios = [];
+
+  // final usuarios = [
+  //   Usuario(
+  //       uid: '1', online: true, nombre: 'Miguel', email: 'Miguel@outlook.com'),
+  //   Usuario(
+  //       uid: '2',
+  //       online: false,
+  //       nombre: 'Armando',
+  //       email: 'Armando@outlook.com'),
+  //   Usuario(
+  //       uid: '3', online: true, nombre: 'Daniel', email: 'Daniel@outlook.com'),
+  //   Usuario(
+  //       uid: '4', online: false, nombre: 'Teresa', email: 'Teresa@outlook.com'),
+  //   Usuario(
+  //       uid: '5', online: true, nombre: 'Maria', email: 'Maria@outlook.com'),
+  // ];
+
+  @override
+  void initState() {
+    this._cargarUsuarios();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
     final authservice = Provider.of<AuthService>(context);
+    final socketService = Provider.of<SocketService>(context);
     final usuario = authservice.usuario;
     return Scaffold(
         appBar: AppBar(
@@ -68,15 +65,17 @@ class _UsuariosPageState extends State<UsuariosPage> {
               // TODO: Desconectar del socket server
               Navigator.pushReplacementNamed(context, 'Login');
               AuthService.deleteToken();
+              socketService.disConnect();
             },
           ),
           actions: [
             Container(
               margin: EdgeInsets.only(right: 10),
-              child: Icon(
-                Icons.check_circle,
-                color: Colors.blue[400],
-              ),
+              child: //TODO:: Validacion de conexion de server
+                  (socketService.serverStatus == ServerStatus.Online)
+                      ? Icon(Icons.check_circle, color: Colors.blue[400])
+                      : Icon(Icons.offline_bolt, color: Colors.red),
+              // Icon(Icons.check_circle, color: Colors.blue[400]),
               //child: Icon(Icons.offline_bolt, color: Colors.red,),
             )
           ],
@@ -107,7 +106,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
   ListTile _UsuarioListTitle(Usuario usuario) {
     return ListTile(
       title: Text(usuario.nombre),
-      subtitle: Text(usuario.email),
+      subtitle: Text('Nuevos Mensajes'),
       leading: CircleAvatar(child: Text(usuario.nombre.substring(0, 2))),
       trailing: Container(
         width: 10,
@@ -116,12 +115,20 @@ class _UsuariosPageState extends State<UsuariosPage> {
             color: usuario.online ? Colors.green[300] : Colors.red,
             borderRadius: BorderRadius.circular(100)),
       ),
+      onTap: (() {
+        // print(usuario.nombre);
+        final chatServices = Provider.of<ChatServices>(context, listen: false);
+        chatServices.usuarioPara = usuario;
+        Navigator.pushNamed(context, 'Chat');
+      }),
     );
   }
 
   _cargarUsuarios() async {
+    usuarios = await usuariosService.getUsuarios();
+    setState(() {});
     // monitor network fetch
-    await Future.delayed(Duration(milliseconds: 1000));
+    // await Future.delayed(Duration(milliseconds: 1000));
     // if failed,use refreshFailed()
     _refreshController.refreshCompleted();
   }

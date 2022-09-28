@@ -1,8 +1,15 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:chat_online/services/auth_service.dart';
+import 'package:chat_online/services/socket_service.dart';
 import 'package:chat_online/widgets/chat_message.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../models/mensajes_response.dart';
+import '../services/chat_service.dart';
 
 class ChatPage extends StatefulWidget {
   @override
@@ -10,7 +17,7 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
-  String? _usuarioNombre = 'Hailee Steinfeld';
+  // String? _usuarioNombre = 'Hailee Steinfeld';
   Color _color_btn = Color.fromARGB(255, 49, 4, 251);
   final _textChatController = new TextEditingController();
   final _focusNode = new FocusNode();
@@ -18,34 +25,87 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
 
   AnimationController? animationController;
 
-  List<ChatMessage> _messages = [
-    /*ChatMessage(texto: 'Hola mundo', uuid: '123'),
-    ChatMessage(texto: 'Cruel y Feo', uuid: '12'),
-    ChatMessage(texto: 'No exageres', uuid: '123'),
-    ChatMessage(texto: '....', uuid: '123'),*/
-  ];
+  ChatServices? chatServices;
+  SocketService? socketService;
+  AuthService? authService;
+
+  List<ChatMessage> _messages = [];
+  String? _timeString;
+
+  @override
+  void initState() {
+    super.initState();
+    _timeString =
+        "${DateTime.now().hour} : ${DateTime.now().minute} :${DateTime.now().second}";
+    Timer.periodic(Duration(seconds: 1), (Timer t) => _getCurrentTime());
+
+    chatServices = Provider.of<ChatServices>(context, listen: false);
+    socketService = Provider.of<SocketService>(context, listen: false);
+    authService = Provider.of<AuthService>(context, listen: false);
+
+    socketService?.socket.on('mensaje-personal', _escucharMensaje);
+
+    _cargarMensajes(chatServices?.usuarioPara?.uid);
+  }
+
+  void _getCurrentTime() {
+    setState(() {
+      _timeString = "${DateTime.now().hour}:${DateTime.now().minute}";
+    });
+  }
+
+  void _cargarMensajes(String? UsuarioID) async {
+    List<Mensaje>? chat = await chatServices?.getChat(UsuarioID!);
+    // print(_timeString.toString());
+    final historial = chat!.map((msg) => ChatMessage(
+        uuid: msg.de,
+        texto: msg.mensaje,
+        animationController: AnimationController(
+          vsync: this,
+          duration: Duration(milliseconds: 50),
+        )..forward()));
+
+    setState(() {
+      _messages.insertAll(0, historial);
+    });
+  }
+
+  void _escucharMensaje(dynamic payload) {
+    print('tengo mensaje $payload');
+    // Verificamos que el mensaje sea para la conversacion actual
+    if (payload['de'] != chatServices?.usuarioPara?.uid) return;
+
+    ChatMessage message = ChatMessage(
+      uuid: payload['de'],
+      texto: payload['mensaje'],
+      animationController: AnimationController(
+          vsync: this, duration: Duration(milliseconds: 500)),
+    );
+    setState(() {
+      _messages.insert(0, message);
+    });
+
+    message.animationController?.forward();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final _screenSize = MediaQuery.of(context).size;
-
-    //print(_screenSize);
-    //final Pelicula pelicula = ModalRoute.of(context).settings.arguments;
+    final usuarioPara = chatServices?.usuarioPara;
 
     return Scaffold(
-      backgroundColor: Color.fromRGBO(241, 239, 239, 1),
+      backgroundColor: Color.fromARGB(255, 219, 219, 219),
       appBar: AppBar(
-        centerTitle: false,
+        centerTitle: true,
         foregroundColor: _color_btn,
         elevation: 1.0,
         backgroundColor: Colors.white,
         //fromRGBO(92, 78,
         title: ListTile(
-          leading: CircleAvatar(
-              child: Text(_usuarioNombre.toString().substring(0, 2))),
+          leading:
+              CircleAvatar(child: Text(usuarioPara!.nombre.substring(0, 2))),
           // CircleAvatar(backgroundImage: AssetImage('assets/img/friend.jpg')),
           title: Text(
-            _usuarioNombre.toString(),
+            usuarioPara.nombre,
             style: TextStyle(
               fontSize: 20.0,
               fontFamily: 'Arial',
@@ -64,15 +124,6 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                 reverse: true,
                 itemBuilder: (_, i) => _messages[i],
                 itemCount: _messages.length,
-                //Parte del chat pasado donde agregamos widgets
-                //de mensaje por mensaje
-                /*padding: EdgeInsets.only(left: 15, right: 15),
-                children: <Widget>[
-                  _mensajeFriend(context, "Hola, Como estas ?"),
-                  _mensajePropio(context, "Hola, Bien y tu ?"),
-                  _mensajeFriend(context, "Que haces?"),
-                  _mensajePropio(context, "Hola, Bien y tu ?"),
-                ],*/
               ),
             ),
             SizedBox(height: 15),
@@ -103,9 +154,9 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                 child: TextField(
                   controller: _textChatController,
                   onSubmitted: _eventoBtnSubmit,
-                  onChanged: (String valor) {
+                  onChanged: (String texto) {
                     setState(() {
-                      if (valor.length > 0) {
+                      if (texto.length > 0) {
                         _estaEscribiendo = true;
                       } else {
                         _estaEscribiendo = false;
@@ -148,15 +199,16 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     );
   }
 
-  _eventoBtnSubmit(String valor) {
-    print(valor);
+  _eventoBtnSubmit(String texto) {
+    // print(texto);
     _textChatController.clear();
     _focusNode.requestFocus();
 
-    if (valor.length == 0) return;
+    if (texto.length == 0) return;
     final _newMessage = new ChatMessage(
-      uuid: '123',
-      texto: valor,
+      uuid: authService?.usuario?.uid.toString(),
+      texto: texto,
+      hora: _timeString,
       animationController: AnimationController(
           vsync: this, duration: Duration(milliseconds: 500)),
     );
@@ -166,6 +218,12 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
 
     setState(() {
       _estaEscribiendo = false;
+    });
+
+    socketService?.emitir('mensaje-personal', {
+      'de': authService?.usuario?.uid,
+      'para': chatServices?.usuarioPara?.uid,
+      'mensaje': texto
     });
   }
 
@@ -202,12 +260,6 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                 //color: Colors.red,
                 child: Row(
                   children: [
-                    /*Icon(
-                      Icons.arrow_back,
-                      color: Color.fromRGBO(92, 78, 154, 1),
-
-                      //=> Navigator.pushReplacementNamed(context, 'Login'),
-                    ),*/
                     SizedBox(
                       width: 40,
                     ),
@@ -242,6 +294,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     for (ChatMessage message in _messages) {
       message.animationController?.dispose();
     }
+    socketService?.socket.off('mensaje-personal');
     super.dispose();
   }
 }

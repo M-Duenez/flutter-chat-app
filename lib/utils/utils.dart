@@ -10,7 +10,7 @@ bool isNumero(String s) {
   return (n == null) ? false : true;
 }
 
-void mostrarAlerta(BuildContext context, String mensaje) {
+void mostrarAlerta(BuildContext context, String? mensaje) {
   showDialog(
     context: context,
     barrierDismissible: false,
@@ -29,7 +29,7 @@ void mostrarAlerta(BuildContext context, String mensaje) {
               'Mensaje de Alerta',
               style: TextStyle(color: Colors.white, fontSize: 30.0),
             ),
-            content: Text(mensaje,
+            content: Text(mensaje!,
                 style: TextStyle(fontSize: 25.0, color: Colors.white)),
             actions: <Widget>[
               Container(
@@ -37,7 +37,7 @@ void mostrarAlerta(BuildContext context, String mensaje) {
                 height: 40.0,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(50.0),
-                  child: TextButton(
+                  child: ElevatedButton(
                     style: ButtonStyle(
                         backgroundColor:
                             MaterialStateProperty.all<Color>(Colors.white)),
